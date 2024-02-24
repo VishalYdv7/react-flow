@@ -3,7 +3,7 @@ import { Handle } from 'react-flow-renderer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCoffee } from '@fortawesome/free-solid-svg-icons';
 import { useFlow } from '../FlowContext'; // Ensure the correct path
-
+import '../App.css';
 const IconNode = ({ id, data }) => {
   const { deleteNode } = useFlow();
 
@@ -23,7 +23,7 @@ const IconNode = ({ id, data }) => {
     <Handle type="target" position="left" />
     <FontAwesomeIcon icon={faCoffee} />
     <div>{data.label}</div>
-    <button onClick={handleDelete} style={{ marginTop: '10px' }}>Delete</button>
+    <button className="delete-button" onClick={handleDelete} style={{ marginTop: '10px' }}>Delete</button>
     <Handle type="source" position="right" />
     
   </div>

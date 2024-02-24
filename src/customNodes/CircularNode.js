@@ -2,7 +2,7 @@ import React from 'react';
 import { Handle } from 'react-flow-renderer';
 import { useFlow } from '../FlowContext'; // Ensure the correct path
 import myImage from '../logo_1.png'; // Update the path accordingly
-
+import '../App.css';
 const CircularNode = ({ id, data }) => {
   const { deleteNode } = useFlow();
 
@@ -23,7 +23,7 @@ const CircularNode = ({ id, data }) => {
        <Handle type="target" position="top" />
       <img src={myImage} alt="" style={{ width: '50px', height: '50px',justifyContent: 'center', }} />
       <Handle type="source" position="bottom" />
-      <button onClick={handleDelete} style={{ marginTop: '10px' }}>Delete</button>
+      <button className="delete-button" onClick={handleDelete} style={{ marginTop: '10px' }}>Delete</button>
 
     </div>
   );

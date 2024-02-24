@@ -3,7 +3,7 @@ import React from 'react';
 import { Handle } from 'react-flow-renderer';
 import { useFlow } from '../FlowContext'; // Ensure the correct path
 import myImage from '../logo_1.png'; // Update the path accordingly
-
+import '../App.css';
 const ImageNode = ({ id, data }) => {
   const { deleteNode } = useFlow();
 
@@ -26,7 +26,7 @@ const ImageNode = ({ id, data }) => {
       <img src={myImage} alt="" style={{ width: '50px', height: '50px' }} />
       <div>{data.label}</div>
       <Handle type="source" position="bottom" />
-      <button onClick={handleDelete} style={{ marginTop: '10px' }}>Delete</button>
+      <button className="delete-button" onClick={handleDelete} style={{ marginTop: '10px' }}>Delete</button>
     </div>
   );
 };

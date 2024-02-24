@@ -13,6 +13,24 @@
   }
 }
 
+.button {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  background-color: #5d92e1; /* Green */
+  color: white;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+}
+
+.button:hover {
+  background-color: #0062ad; /* Darker green */
+}
+
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
@@ -26,6 +44,20 @@
 
 .App-link {
   color: #61dafb;
+}
+
+.delete-button {
+  background-color: #ff6347; 
+  color: white;
+  border: none; 
+  border-radius: 5px; 
+  padding: 5px 5px; 
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.delete-button:hover {
+  background-color: #dc150f;
 }
 
 @keyframes App-logo-spin {

@@ -1,13 +1,23 @@
 import React, {  useCallback, useRef } from 'react';
-import ReactFlow from 'react-flow-renderer';
 import { MiniMap, Controls } from 'react-flow-renderer';
-
+import Dagre from '@dagrejs/dagre';
+import ReactFlow, {
+  ReactFlowProvider, 
+  Panel,
+  useNodesState,
+  useEdgesState,
+  useReactFlow,
+} from 'react-flow-renderer';
 import { useFlow } from './FlowContext';
 import ImageNode from './customNodes/ImageNode';
 import CircularNode from './customNodes/CircularNode';
 import CustomNodeComponent from './customNodes/CustomNodeComponent';
 import IconNode from './customNodes/IconNode';
 import myImage from './logo_1.png';
+import './App.css';
+
+
+let branchCounter = 1;
 
 const FlowDiagram = () => {
   const { nodes, edges, setNodes, setEdges, history, currentHistoryIndex,
@@ -43,7 +53,7 @@ const FlowDiagram = () => {
     pushToHistory(newNodes, edges);
     setNodes(newNodes);
   }, [nodes, edges, pushToHistory]);
-  
+
   const onConnect = useCallback((params) => {
     const { source, target } = params;
     const sourceNode = nodes.find((n) => n.id === source);
@@ -51,13 +61,18 @@ const FlowDiagram = () => {
     // Determine if we're starting a new branch or continuing an existing one
     if (sourceNode.type === 'circular' || sourceNode.data.branch) {
       let branchName;
+      let branchLevel;
     if (sourceNode.type === 'circular') {
       // Generate a unique branch name based on the ID of the source circular node
-      branchName = `branch_${source}_${Math.random().toString(36).substr(2, 9)}`;
+      branchName = `branch_${branchCounter}`;
+      branchLevel = 1;
+      branchCounter++;
     } else {
       // If the source already has a branch assigned, use that branch name
       branchName = sourceNode.data.branch;
+      branchLevel= sourceNode.data.level + 1; 
     }
+
       const updatedNodes = nodes.map(node => {
         if (node.id === target) {
           return {
@@ -65,17 +80,17 @@ const FlowDiagram = () => {
             data: {
               ...node.data,
               branch: branchName, // Assign the branch name
+              level: branchLevel,
             },
           };
         }
         return node;
       });
-
       // Update the nodes state with the new branch information
       setNodes(updatedNodes);
     }
     if (shouldPreventConnection(sourceNode, targetNode)) {
-      console.error("Invalid connection between parallel nodes.");
+      console.error("Invalid connection between parallel nodes.",sourceNode.data.branchName, targetNode.data.branchName);
       return;
     }
     // Determine if the connection is leading to the end of a parallel branch
@@ -87,7 +102,7 @@ const FlowDiagram = () => {
             ...node,
             data: {
               ...node.data,
-              label: `${node.data.label} - End of Parallel Branch`
+              label: `End of parallel ${node.data.branch} `
             }
           };
         }
@@ -98,8 +113,10 @@ const FlowDiagram = () => {
       setNodes(updatedNodes);
     }
     setEdges((eds) => [...eds, { id: `e${params.source}-${params.target}`, ...params }]);
-    console.log(nodes)
-    console.log(edges)
+    nodes.forEach(node => {
+      console.log(node);
+    });
+
   }, [nodes, edges, setEdges, setNodes]);
 
   function shouldPreventConnection(sourceNode, targetNode) {
@@ -110,11 +127,9 @@ const FlowDiagram = () => {
     }
     const sourceBranch = sourceNode.data.branch; // Assuming 'branch' is a property indicating the node's branch
     const targetBranch = targetNode.data.branch;
-    console.log(sourceBranch," ",targetBranch);
     // Check if both branches are defined before comparing them
     if (sourceBranch && targetBranch && sourceBranch !== targetBranch) {
       alert(`Cannot connect nodes from different branches: ${sourceBranch} to ${targetBranch}`);
-      console.log(sourceBranch, " ", targetBranch);
       return true; // Prevents connecting nodes from different branches
     }
 
@@ -159,34 +174,84 @@ const FlowDiagram = () => {
 
 
 
+
+  
   const makeNodesEquispacedAndCentered = useCallback(() => {
     if (!reactFlowWrapper.current || nodes.length === 0) return;
-    const spacing = 150; // Vertical spacing between nodes
+
+    const spacingBetweenBranches = 250; // Spacing between branches (columns)
+    const spacingBetweenLevels = 200; // Spacing between levels (rows)
     const containerWidth = reactFlowWrapper.current.offsetWidth;
     const containerHeight = reactFlowWrapper.current.offsetHeight;
     const centerX = containerWidth / 2;
     const centerY = containerHeight / 2;
-    const totalNodesHeight = nodes.length * spacing;
-    const startY = centerY - totalNodesHeight / 2;
-    const updatedNodes = nodes.map((node, index) => ({
-        ...node,
-        position: { x: centerX - 50, y: startY + index * spacing }
-    }));
-    
-    // Calculate the average x-position of nodes
-    const averageX = updatedNodes.reduce((acc, node) => acc + node.position.x, 0) / updatedNodes.length;
-    
-    // Adjust x-positions to create equispaced nodes
-    const offsetX = centerX - averageX;
-    const equispacedNodes = updatedNodes.map(node => ({
-        ...node,
-        position: { x: node.position.x + offsetX, y: node.position.y }
-    }));
 
-    pushToHistory(equispacedNodes, edges);
-    setNodes(equispacedNodes);
-    console.log(equispacedNodes);
+    // Group nodes by branch name
+    const branchNodesMap = {};
+    nodes.forEach(node => {
+        const branchName = node.data.branch;
+        if (branchName) {
+            if (!branchNodesMap[branchName]) {
+                branchNodesMap[branchName] = [];
+            }
+            branchNodesMap[branchName].push(node);
+        }
+    });
+
+    // Arrange branches horizontally
+    const branchNames = Object.keys(branchNodesMap);
+    const totalBranches = branchNames.length;
+    const branchSpacing = (totalBranches - 1) * spacingBetweenBranches;
+    const initialX = centerX - branchSpacing / 2;
+    let currentX = initialX;
+
+    // Iterate over each branch to arrange nodes vertically
+    branchNames.forEach(branchName => {
+        const branchNodes = branchNodesMap[branchName];
+        const totalLevels = branchNodes.length;
+        const levelSpacing = (totalLevels - 1) * spacingBetweenLevels;
+        let currentY = centerY - levelSpacing / 2;
+
+        // Arrange nodes vertically for the current branch
+        branchNodes.forEach(node => {
+            node.position = { x: currentX, y: currentY };
+            currentY += spacingBetweenLevels;
+        });
+
+        // Move to the next branch
+        currentX += spacingBetweenBranches;
+    });
+
+    let totalX = 0;
+    let totalNodes = 0;
+    nodes.forEach(node => {
+        if (node.data.branch) {
+            totalX += node.position.x;
+            totalNodes++;
+        }
+    });
+    const averageX = totalNodes > 0 ? totalX / totalNodes : centerX;
+
+// Center nodes without branches and levels
+const nodesWithoutBranch = nodes.filter(node => !node.data.branch);
+nodesWithoutBranch.forEach(node => {
+    node.position = { x: averageX, y: node.position.y };
+}); 
+    // Update nodes with their new positions
+    const updatedNodes = nodes.map(node => {
+        if (node.data.branch) {
+            return branchNodesMap[node.data.branch].find(n => n.id === node.id);
+        }
+        return node;
+    });
+
+    // Update nodes with equispaced positions
+    pushToHistory(updatedNodes, edges);
+    setNodes(updatedNodes);
 }, [nodes, edges, pushToHistory, reactFlowWrapper]);
+
+
+
 
 
 
@@ -242,13 +307,13 @@ const FlowDiagram = () => {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <div style={{ justifyContent: 'space-evenly', padding: '10px' }}>
-        <button onClick={makeNodesEquispacedAndCentered}>Equispace Nodes</button>
-        <button onClick={undo}>Undo</button>
-        <button onClick={redo}>Redo</button>
-        <button onClick={() => addNode('circular')}>Add Circular Node</button>
-        <button onClick={() => addNode('iconNode')}>Add ICON Node</button>
-        <button onClick={() => addNode('imageNode')}>Add Image Node</button>
-        <button onClick={() => addNode('default')}>Add Default Node</button>
+        <button className="button" onClick={makeNodesEquispacedAndCentered}>Equispace Nodes</button>
+        <button className="button" onClick={redo}>Redo</button>
+        <button className="button" onClick={undo}>Undo</button>
+        <button className="button" onClick={() => addNode('circular')}>Add Circular Node</button>
+        <button className="button" onClick={() => addNode('iconNode')}>Add ICON Node</button>
+        <button className="button" onClick={() => addNode('imageNode')}>Add Image Node</button>
+        <button className="button" onClick={() => addNode('default')}>Add Default Node</button>
       </div>
       <div ref={reactFlowWrapper} style={{ height: '100vh' }}>
         <ReactFlow
